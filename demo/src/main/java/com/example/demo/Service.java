@@ -6,6 +6,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.ResourceUtils;
 
 import java.io.File;
@@ -27,6 +28,7 @@ public class Service {
     private final Logger logger = LoggerFactory.getLogger(Service.class);
     @Autowired
     private Repository repository;
+    private final int RUNS = 5;
 
     /**
      * Fetches all files within the passed classpath-dir
@@ -34,7 +36,7 @@ public class Service {
      * @return List of files as Strings
      */
     public List<String> getFilesFromDir(String dir) throws FileNotFoundException {
-        File folder = ResourceUtils.getFile("classpath:" + dir);
+        File folder = ResourceUtils.getFile(dir);
         File[] files = folder.listFiles();
         return Arrays.stream(files).map(File::getName).toList();
     }
@@ -58,15 +60,24 @@ public class Service {
     }
 
     public void executeExperiments(String fileName, String dir) throws IOException, AuthenticationException {
-        JSONObject fileContent = new JSONObject(new String(Files.readAllBytes(ResourceUtils.getFile("classpath:" + "gpt-4-experiments" + "/" + fileName).toPath())));
+        JSONObject fileContent = new JSONObject(new String(Files.readAllBytes(ResourceUtils.getFile("gpt-4-experiments/" + fileName).toPath())));
         JSONArray experiments = fileContent.getJSONArray("explanations");
 
         int index = calculateIndex(experiments);
         if(index != -1) {
             for (int i = 0; i < experiments.length(); i++) {
                 String prompt = experiments.getJSONObject(i).getString("prompt");
-                String gptExplanation = repository.sendPromptToOpenAI(prompt);
-                experiments.getJSONObject(i).put("gptExplanation", gptExplanation);
+                String gptExplanation;
+                int counter = 0;
+                do{
+                    gptExplanation = repository.sendPromptToOpenAI(prompt);
+                    experiments.getJSONObject(i).put("gptExplanation", gptExplanation);
+                    counter++;
+                }while(gptExplanation == null && counter < RUNS);
+                if(gptExplanation == null) {
+                    logger.error("Error while computing gptExplanation in file {} at index {}", fileName, i);
+                    break;
+                }
             }
             fileContent.put("explanations", experiments);
             writeNewFile(fileContent, fileName);
@@ -84,8 +95,10 @@ public class Service {
     }
 
     public void writeNewFile(JSONObject fileContent, String oldFileName) throws IOException {
-        String fileName = oldFileName + "_" + fileContent.getJSONArray("explanations").length() + "_runs_" + LocalDateTime.now();
-        FileWriter fileWriter = new FileWriter("classpath:gpt-4-experiments/" + fileName);
+        File file = ResourceUtils.getFile("gpt-4-experiments/" + oldFileName);
+        file.delete();
+        String filename = oldFileName.replace(".json", "_" + LocalDateTime.now() + ".json");
+        FileWriter fileWriter = new FileWriter("gpt-4-experiments/" + filename);
         fileWriter.write(fileContent.toString());
         fileWriter.flush();
         fileWriter.close();

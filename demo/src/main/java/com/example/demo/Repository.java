@@ -36,25 +36,30 @@ public class Repository {
     public String sendPromptToOpenAI(String prompt) throws IOException, AuthenticationException {
         // TODO: If required, check if token size less than 8k
 
-        HttpURLConnection connection = (HttpURLConnection) CHATGPT_ENDPOINT.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        if(API_KEY != null)
-            connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
-        else {
-            logger.error("No API-Key provided!");
-            throw new AuthenticationException("No API-Key provided!");
+        try {
+            HttpURLConnection connection = (HttpURLConnection) CHATGPT_ENDPOINT.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            if (API_KEY != null)
+                connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
+            else {
+                logger.error("No API-Key provided!");
+                throw new AuthenticationException("No API-Key provided!");
+            }
+
+            JSONObject data = createRequest(prompt);
+            connection.setDoOutput(true);
+            connection.getOutputStream().write(data.toString().getBytes());
+
+            String output = new BufferedReader(new InputStreamReader(connection.getInputStream())).lines()
+                    .reduce((a, b) -> a + b).get();
+
+            return new JSONObject(output).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
+        } catch(Exception e) {
+            return null;
         }
-
-        JSONObject data = createRequest(prompt);
-        connection.setDoOutput(true);
-        connection.getOutputStream().write(data.toString().getBytes());
-
-        String output = new BufferedReader(new InputStreamReader(connection.getInputStream())).lines()
-                .reduce((a,b) -> a + b).get();
-
-        return new JSONObject(output).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
     }
+
 
     public JSONObject createRequest(String prompt) {
         JSONObject data = new JSONObject();
