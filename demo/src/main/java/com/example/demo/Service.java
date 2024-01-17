@@ -66,10 +66,12 @@ public class Service {
         int index = calculateIndex(experiments);
         if(index != -1) {
             for (int i = 0; i < experiments.length(); i++) {
+                logger.info("--------------------- {}. experiment", i);
                 String prompt = experiments.getJSONObject(i).getString("prompt");
                 String gptExplanation;
                 int counter = 0;
                 do{
+                    logger.info("Trying to send request");
                     gptExplanation = repository.sendPromptToOpenAI(prompt);
                     experiments.getJSONObject(i).put("gptExplanation", gptExplanation);
                     counter++;

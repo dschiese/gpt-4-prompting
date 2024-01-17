@@ -37,6 +37,7 @@ public class Repository {
         // TODO: If required, check if token size less than 8k
 
         try {
+            logger.info("Send GPT Request");
             HttpURLConnection connection = (HttpURLConnection) CHATGPT_ENDPOINT.openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
@@ -56,6 +57,7 @@ public class Repository {
 
             return new JSONObject(output).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
         } catch(Exception e) {
+            logger.error(e.toString());
             return null;
         }
     }
@@ -70,7 +72,7 @@ public class Repository {
         jsonArray.put(arrayEntity);
         data.put("model", USED_MODEL);
         data.put("messages", jsonArray);
-
+        logger.info("{}", data.toString());
         return data;
     }
 
