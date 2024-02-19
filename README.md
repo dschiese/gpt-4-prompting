@@ -50,6 +50,6 @@ This service takes JSON-files following the structure below to send the containi
       "questionNumber": 69
     }
   ]
-}
+}]
 }
 ```
