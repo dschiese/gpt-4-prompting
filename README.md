@@ -1,4 +1,4 @@
-# Prompt sending for GPT-4 
+# Prompt sending for GPT-4 with pre-defined data
 
 ## Explanation
 
